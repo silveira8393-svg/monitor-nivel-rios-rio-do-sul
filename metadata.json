@@ -1,0 +1,6 @@
+{
+  "name": "Monitor de Nível dos Rios – Rio do Sul",
+  "description": "Painel de monitoramento do nível dos rios em Rio do Sul (SC) preparado para integração com Supabase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
