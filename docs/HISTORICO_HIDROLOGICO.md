@@ -24,7 +24,7 @@ Faixas sem medições têm representação explícita na tabela e fundo âmbar n
 
 Gráfico SVG sem nova dependência de produção. O eixo vertical usa metros; os pontos usam horários reais. Cursor, toque ou setas do teclado permitem consultar nível, horário e variação. O gráfico acompanha a largura disponível sem reduzir os rótulos proporcionalmente em telas pequenas.
 
-A tabela começa pela faixa mais recente e renderiza até 25 linhas por página. O gráfico renderiza até 240 faixas por trecho, com navegação para trechos anteriores. Ambos utilizam exatamente o mesmo conjunto agregado. Trechos do gráfico têm escala vertical própria; os valores do eixo indicam a escala vigente.
+A tabela começa pela faixa mais recente e renderiza até 25 linhas por página dentro do trecho selecionado no gráfico. O gráfico renderiza até 240 faixas por trecho, com navegação para trechos anteriores. Ambos utilizam exatamente o mesmo conjunto agregado e a mesma seleção de trecho. Trocar o trecho reinicia a página da tabela; aplicar filtros reinicia ambos. As variações são calculadas sobre o período completo antes de selecionar o trecho, preservando a comparação nas fronteiras. Trechos do gráfico têm escala vertical própria; os valores do eixo indicam a escala vigente.
 
 O histórico é uma consulta do período selecionado. Enquanto o modal estiver aberto, novas medições continuam chegando aos cards; o histórico é recarregado ao alterar os filtros, tentar novamente ou reabrir o modal. O cabeçalho mostra a medição mais recente conhecida entre o card e o período consultado.
 
@@ -62,7 +62,7 @@ Em falhas temporárias, a última leitura válida é preservada e acompanhada de
 ## Validação
 
 - `npm run lint`: TypeScript do frontend e dos testes.
-- `npm test`: 21 testes com dados inteiramente simulados, cobrindo agregação, última leitura válida, virada de dia, horário de verão histórico, lacunas, variação, ordenação, limites extensos, paginação da API, erros, cancelamento, filtros, paginação da tabela, segmentação do gráfico, teclado, respostas atrasadas, Realtime e recuperação após reconexão/retorno à aba.
+- `npm test`: 22 testes com dados inteiramente simulados, cobrindo agregação, última leitura válida, virada de dia, horário de verão histórico, lacunas, variação, ordenação, limites extensos, paginação da API, erros, cancelamento, filtros, paginação da tabela, segmentação do gráfico, teclado, respostas atrasadas, Realtime e recuperação após reconexão/retorno à aba. A regressão de sincronização compara datas, níveis, variações e lacunas entre tabela e trecho do gráfico, atravessa páginas e trechos (inclusive o mais antigo, parcial), exercita todos os intervalos e períodos e distingue datas personalizadas em edição do filtro aplicado.
 - `npm run build`: build Vite local.
 - `git diff --check`: integridade do diff.
 

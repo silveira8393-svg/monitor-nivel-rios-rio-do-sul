@@ -9,7 +9,7 @@ import { HistoryChart } from '../src/components/HistoryChart';
 import { useRiverReadings } from '../src/hooks/useRiverReadings';
 import { riverService } from '../src/services/supabase';
 import { MONITORED_STATIONS, type RiverReading } from '../src/types/river';
-import { addReadingsToBuckets, calculateDisplayedVariations, createBuckets } from '../src/lib/hydrology';
+import { addReadingsToBuckets, calculateDisplayedVariations, createBuckets, formatDateTime, formatMeters, type HistoryBucket } from '../src/lib/hydrology';
 import type { ConnectionStatus } from '../src/services/riverRepository';
 
 // Fixtures exist exclusively in tests; no demo measurements enter production code.
@@ -19,7 +19,95 @@ async function mount(element: React.ReactNode) { root = createRoot(container); a
 async function unmount() { if (root) await act(async () => root.unmount()); }
 async function click(element: Element) { await act(async () => element.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }))); }
 async function select(element: HTMLSelectElement, value: string) { await act(async () => { element.value = value; element.dispatchEvent(new dom.window.Event('change', { bubbles: true })); }); }
+async function setInput(input: HTMLInputElement, value: string) {
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+    input.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    input.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  });
+}
 after(() => dom.window.close());
+
+test('table pages stay inside the selected chart segment and reset when navigating segments or filters', async () => {
+  const original = riverService.getStationHistory;
+  let aggregated: HistoryBucket[] = [];
+  riverService.getStationHistory = async (_station, range, interval) => {
+    const buckets = createBuckets(range, interval);
+    // Keep gaps and real timestamps away from bucket boundaries.
+    addReadingsToBuckets(buckets, buckets.flatMap((bucket, index) => {
+      const time = Math.max(Date.parse(bucket.start), Date.parse(range.start)) + 60000;
+      return index % 7 === 3 || time > Date.parse(range.end) ? [] : [{
+        id: String(index), stationId: 'fixture', levelMeters: 2 + index / 100, readAt: new Date(time).toISOString(),
+      }];
+    }), range);
+    aggregated = calculateDisplayedVariations(buckets);
+    return aggregated;
+  };
+  const button = (text: string) => [...container.querySelectorAll('button')].find(item => item.textContent === text)!;
+  const check = (segment: number, page = 0) => {
+    const end = aggregated.length - segment * 240;
+    const segmentBuckets = aggregated.slice(Math.max(0, end - 240), end);
+    const expectedRows = [...segmentBuckets].reverse().slice(page * 25, (page + 1) * 25);
+    assert.deepEqual([...container.querySelectorAll('tbody tr')].map(row => [...row.querySelectorAll('td')].map(cell => cell.textContent)),
+      expectedRows.map(bucket => {
+        const [date, time] = formatDateTime(bucket.reading?.readAt ?? bucket.start).split(', ');
+        return [date, bucket.reading ? time : `${time}até ${formatDateTime(bucket.end)}`,
+          bucket.reading ? formatMeters(bucket.reading.levelMeters) : 'Sem medição', formatMeters(bucket.variationMeters, true)];
+      }));
+    assert.deepEqual([...container.querySelectorAll('circle title')].map(title => title.textContent),
+      segmentBuckets.flatMap(bucket => bucket.reading ? [`${formatDateTime(bucket.reading.readAt)}: ${formatMeters(bucket.reading.levelMeters)}`] : []));
+    assert.equal(container.querySelectorAll('svg rect').length, segmentBuckets.filter(bucket => !bucket.reading).length);
+    assert.ok(container.textContent?.includes(`Página ${page + 1} de ${Math.ceil(segmentBuckets.length / 25)}`));
+  };
+  try {
+    await mount(<StationHistoryModal stationId="fixture" stationName="Fixture" latestReadAt={null} onClose={() => {}} />);
+    const selects = container.querySelectorAll('select');
+    check(0);
+    await select(selects[0], '7d');
+    await select(selects[1], '15');
+    await click(button('Próxima'));
+    await click(button('← Anterior'));
+    check(1); // Previously the table stayed on the latest segment's second page.
+    await click(button('Próxima'));
+    check(1, 1);
+    // Traverse the partial oldest segment, including its last table page.
+    while (!button('← Anterior').disabled) await click(button('← Anterior'));
+    const oldest = Math.ceil(aggregated.length / 240) - 1;
+    check(oldest);
+    let page = 0;
+    while (!button('Próxima').disabled) { await click(button('Próxima')); check(oldest, ++page); }
+    await click(button('Seguinte →'));
+    check(oldest - 1);
+    for (const period of ['24h', '7d', '30d']) {
+      await select(selects[0], period);
+      for (const interval of ['15', '30', '60', '120', '360']) {
+        await select(selects[1], interval);
+        check(0);
+        if (!button('Próxima').disabled) await click(button('Próxima'));
+      }
+    }
+    await select(selects[0], 'custom');
+    const inputs = container.querySelectorAll('input');
+    const applied = aggregated;
+    await setInput(inputs[0], '2026-10-01T00:07');
+    await setInput(inputs[1], '2026-10-08T10:43');
+    assert.equal(aggregated, applied); // Draft dates do not change the applied filter.
+    await select(selects[1], '30');
+    check(0);
+    assert.equal(aggregated[0].start.slice(0, 10), applied[0].start.slice(0, 10));
+    await click(button('← Anterior'));
+    await click(button('Próxima'));
+    await act(async () => container.querySelector('form')!.dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true })));
+    check(0);
+    assert.equal(aggregated[0].reading?.readAt, '2026-10-01T03:08:00.000Z');
+    assert.ok(aggregated.every(bucket => !bucket.reading || (Date.parse(bucket.reading.readAt!) >= Date.parse('2026-10-01T03:07:00Z')
+      && Date.parse(bucket.reading.readAt!) <= Date.parse('2026-10-08T13:43:00Z'))));
+    await click(button('← Anterior'));
+    check(1);
+    await select(selects[1], '120');
+    check(0);
+  } finally { await unmount(); riverService.getStationHistory = original; }
+});
 
 test('history defaults to 24h / 1h; filters update chart and paginated table; custom range validates and applies', async () => {
   const original = riverService.getStationHistory;
@@ -53,13 +141,6 @@ test('history defaults to 24h / 1h; filters update chart and paginated table; cu
     await select(selects[0], 'custom');
     const inputs = container.querySelectorAll('input');
     // Native form submit reads the current controlled state. Set inputs with the native setter.
-    const setInput = async (input: HTMLInputElement, value: string) => {
-      await act(async () => {
-        Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value')!.set!.call(input, value);
-        input.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
-        input.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
-      });
-    };
     await setInput(inputs[0], '2026-10-30T10:00');
     await setInput(inputs[1], '2026-10-29T10:00');
     await act(async () => container.querySelector('form')!.dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true })));
@@ -137,7 +218,7 @@ test('chart breaks paths over missing intervals and exposes keyboard details', a
   const buckets = createBuckets(range, 60);
   addReadingsToBuckets(buckets, [{ id: 'a', stationId: 'fixture', levelMeters: 2, readAt: '2026-10-30T03:15:00Z' }, { id: 'b', stationId: 'fixture', levelMeters: 3, readAt: '2026-10-30T05:15:00Z' }], range);
   try {
-    await mount(<HistoryChart buckets={calculateDisplayedVariations(buckets)} range={range} />);
+    await mount(<HistoryChart buckets={calculateDisplayedVariations(buckets)} range={range} page={0} onPageChange={() => {}} />);
     const paths = container.querySelectorAll('path[stroke-width="2.5"]');
     assert.equal(paths.length, 2);
     assert.ok([...paths].every(path => !path.getAttribute('d')?.includes(' L')));

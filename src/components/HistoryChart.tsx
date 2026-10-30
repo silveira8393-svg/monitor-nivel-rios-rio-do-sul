@@ -2,8 +2,11 @@ import React, { useEffect, useId, useRef, useState, type PointerEvent } from 're
 import { formatDateTime, formatMeters, type HistoryBucket, type HistoryRange } from '../lib/hydrology';
 
 export const CHART_PAGE_SIZE = 240;
-export function HistoryChart({ buckets, range }: { buckets: HistoryBucket[]; range?: HistoryRange }) {
-  const [page, setPage] = useState(0);
+export function getHistorySegment(buckets: HistoryBucket[], page: number) {
+  const end = buckets.length - page * CHART_PAGE_SIZE;
+  return buckets.slice(Math.max(0, end - CHART_PAGE_SIZE), end);
+}
+export function HistoryChart({ buckets, range, page, onPageChange }: { buckets: HistoryBucket[]; range?: HistoryRange; page: number; onPageChange: (page: number) => void }) {
   const [selected, setSelected] = useState<number | null>(null);
   const id = useId();
   const frame = useRef<HTMLDivElement>(null);
@@ -20,8 +23,7 @@ export function HistoryChart({ buckets, range }: { buckets: HistoryBucket[]; ran
   }, []);
   const pages = Math.max(1, Math.ceil(buckets.length / CHART_PAGE_SIZE));
   const effectivePage = Math.min(page, pages - 1);
-  const end = buckets.length - effectivePage * CHART_PAGE_SIZE;
-  const visible = buckets.slice(Math.max(0, end - CHART_PAGE_SIZE), end);
+  const visible = getHistorySegment(buckets, effectivePage);
   const levels = visible.flatMap(bucket => bucket.reading ? [bucket.reading.levelMeters!] : []);
   const minimum = levels.length ? Math.min(...levels) : 0;
   const maximum = levels.length ? Math.max(...levels) : 1;
@@ -56,9 +58,9 @@ export function HistoryChart({ buckets, range }: { buckets: HistoryBucket[]; ran
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h3 className="font-bold text-sm">Evolução do nível <span className="font-normal text-slate-500">· metros</span></h3>
       {pages > 1 && <div className="flex items-center gap-2 text-xs">
-        <button className="history-button" disabled={effectivePage >= pages - 1} onClick={() => { setPage(effectivePage + 1); setSelected(null); }}>← Anterior</button>
+        <button className="history-button" disabled={effectivePage >= pages - 1} onClick={() => { onPageChange(effectivePage + 1); setSelected(null); }}>← Anterior</button>
         <span>Trecho {pages - effectivePage} de {pages}</span>
-        <button className="history-button" disabled={effectivePage === 0} onClick={() => { setPage(effectivePage - 1); setSelected(null); }}>Seguinte →</button>
+        <button className="history-button" disabled={effectivePage === 0} onClick={() => { onPageChange(effectivePage - 1); setSelected(null); }}>Seguinte →</button>
       </div>}
     </div>
     <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-2 sm:p-4 bg-slate-50/50 dark:bg-slate-950/40">

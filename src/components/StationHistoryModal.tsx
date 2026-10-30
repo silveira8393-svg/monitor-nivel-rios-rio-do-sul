@@ -2,7 +2,7 @@ import React, { useEffect, useId, useMemo, useState } from 'react';
 import { X, LoaderCircle, TriangleAlert } from 'lucide-react';
 import { riverService } from '../services/supabase';
 import { useDialog } from '../hooks/useDialog';
-import { HistoryChart } from './HistoryChart';
+import { getHistorySegment, HistoryChart } from './HistoryChart';
 import { formatDateTime, formatMeters, fromLocalInput, getHistoryRange, INTERVALS, MAX_HISTORY_DAYS, toLocalInput, validateRange, type HistoryBucket, type HistoryInterval, type HistoryPeriod, type HistoryRange } from '../lib/hydrology';
 
 interface Props { stationId: string; stationName: string; latestReadAt: string | null; onClose: () => void }
@@ -22,19 +22,21 @@ export function StationHistoryModal({ stationId, stationName, latestReadAt, onCl
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
   const [page, setPage] = useState(0);
+  const [chartPage, setChartPage] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     setIsLoading(true);
     setError(null);
     setBuckets([]);
     setPage(0);
+    setChartPage(0);
     riverService.getStationHistory(stationId, query.range, query.interval, controller.signal)
       .then(result => { if (!controller.signal.aborted) setBuckets(result); })
       .catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : 'Erro ao consultar o histórico.'); })
       .finally(() => { if (!controller.signal.aborted) setIsLoading(false); });
     return () => controller.abort();
   }, [stationId, query, retry]);
-  const rows = useMemo(() => [...buckets].reverse(), [buckets]);
+  const rows = useMemo(() => getHistorySegment(buckets, chartPage).reverse(), [buckets, chartPage]);
   const validCount = buckets.filter(bucket => bucket.reading !== null).length;
   const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const visibleRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -102,7 +104,8 @@ export function StationHistoryModal({ stationId, stationName, latestReadAt, onCl
           : <>
             <div className="flex flex-wrap gap-4 text-xs text-slate-500" role="status"><span><strong className="text-slate-900 dark:text-white">{validCount}</strong> faixas com medição</span><span><strong>{buckets.length - validCount}</strong> faixas sem medição</span></div>
             {validCount === 0 && <p className="rounded-xl p-4 bg-slate-100 dark:bg-slate-800 text-sm">Sem medições disponíveis neste período. Selecione outro período para consultar.</p>}
-            <HistoryChart key={`${query.range.start}-${query.range.end}-${query.interval}`} buckets={buckets} range={query.range} />
+            <HistoryChart key={`${query.range.start}-${query.range.end}-${query.interval}`} buckets={buckets} range={query.range} page={chartPage}
+              onPageChange={nextPage => { setChartPage(nextPage); setPage(0); }} />
             <section aria-label="Tabela histórica" className="space-y-3">
               <h3 className="font-bold text-sm">Registros por intervalo</h3>
               <p className="text-xs text-slate-500">Mais recentes primeiro. Variação entre medições exibidas, em ordem cronológica; quando há lacunas, a comparação usa a medição exibida anterior disponível. A primeira medição do período não tem comparação.</p>
