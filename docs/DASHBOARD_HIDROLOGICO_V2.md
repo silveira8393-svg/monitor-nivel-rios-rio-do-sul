@@ -2,7 +2,7 @@
 
 ## Escopo e base
 
-Branch `feat/dashboard-hidrologico-v2`, criada a partir de `feat/historico-hidrologico` no commit `7c87efd`. A árvore de trabalho estava limpa. O layout segue a referência textual fornecida: fundo azul suave, superfícies brancas, bordas discretas, cantos arredondados, sombras leves e identidade Silveira Lab. Não foi fornecida uma imagem do layout aprovado.
+Branch `feat/dashboard-hidrologico-v2`, criada a partir de `feat/historico-hidrologico` no commit `7c87efd`. A árvore de trabalho estava limpa. A primeira versão seguiu a referência textual. O refinamento visual posterior usa a imagem aprovada “Painel de Monitoramento dos Rios.png” e a foto original “vista-aerea-rio-do-sul-noite.jpg” fornecidas pelo usuário.
 
 Sem alterações nos IDs das estações, Supabase remoto, banco, credenciais, variáveis de ambiente, Edge Functions, coleta ou agendamento. Sem dependências adicionais. O modal homologado, o gráfico histórico e `hydrology.ts` permanecem inalterados.
 
@@ -40,6 +40,16 @@ A evolução é a diferença entre a primeira e a última medição agregada dis
 - Comandos: `npm.cmd test`, `npm.cmd run lint`, `npm.cmd run build` e `git diff --check`.
 - Resultado local: 31/31 testes passaram; TypeScript da aplicação e dos testes, build Vite e integridade do diff passaram.
 - O servidor de desenvolvimento respondeu HTTP 200. O host de acesso automatizado ao navegador está indisponível neste ambiente; revisão visual em desktop/celular não foi concluída. Os testes de interface usam jsdom e dados simulados exclusivamente em `tests/`; não validam o layout renderizado pelo navegador ou a disponibilidade do Supabase remoto.
-- Não foi usada uma imagem de referência, nem foram alteradas configurações remotas para obter acesso aos dados. A homologação visual e com dados reais deve ocorrer no Preview antes da aprovação.
+- A homologação visual e com dados reais deve ocorrer no Preview antes da aprovação. Nenhuma configuração remota foi alterada para obter acesso aos dados.
+
+## Refinamento com as imagens aprovadas
+
+O cabeçalho passou a reunir o título completo, identificação de SC, atribuição da fonte e ações do painel. Os quatro indicadores são horizontais. Os cards aproximam nível e minigráfico lado a lado, com situação no cabeçalho, horário/idade/variação abaixo e duas ações alinhadas. Panorama, resumo e orientações ficam em três colunas nas telas largas; a legenda de situações ocupa uma faixa própria. Cores, bordas, sombras e espaçamentos seguem a referência visual. A evolução detalhada por estação permanece disponível em um bloco expansível no resumo, sem eliminar os dados existentes.
+
+A foto correta está em `public/images/rio-do-sul-noite.jpg`, com os mesmos bytes do original (SHA-256 `367DB6C3A0A04F7DCFDB0CF6388F59D17452E6EF41C6B7255D3EC982F54FFD31`). É usada como imagem do topo, com texto alternativo, dimensões intrínsecas, prioridade de carregamento, recorte responsivo e sobreposição clara em gradiente. Não foi gerada ou substituída por outra imagem.
+
+O layout adapta os indicadores e cards para duas colunas e depois uma coluna conforme a largura disponível; os blocos inferiores se empilham no celular. Os minigráficos receberam eixos e preenchimento azul apenas entre pontos reais de cada segmento; as lacunas continuam interrompidas. Horários e valores da imagem de referência não foram utilizados como dados do aplicativo. As afirmações de “monitoramento oficial” da referência não foram copiadas: a identificação de ferramenta independente e a informação de situação incompleta permanecem.
+
+As mudanças desta revisão se restringem à apresentação e ao ativo de imagem. Consultas, hooks, agregação, regras de atualidade e histórico homologado permanecem intactos. O acesso automatizado ao navegador continua indisponível; a comparação de screenshots desktop/mobile permanece pendente.
 
 Entrega por branch e PR Draft com base em `feat/historico-hidrologico`, sem merge ou publicação em produção.

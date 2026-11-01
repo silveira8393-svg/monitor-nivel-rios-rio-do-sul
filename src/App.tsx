@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Info, MapPin, Waves, Shield, ExternalLink, BookOpen, Clock3, TrendingUp } from 'lucide-react';
+import { Info, Waves, Shield, ExternalLink, TrendingUp, Bell, ChartNoAxesColumnIncreasing, CircleCheck, TriangleAlert, Siren } from 'lucide-react';
 import { Header } from './components/Header';
 import { StationCard } from './components/StationCard';
 import { SupabaseInfoModal } from './components/SupabaseInfoModal';
@@ -10,7 +10,7 @@ import { HydrologySummary } from './components/HydrologySummary';
 import { useRiverReadings } from './hooks/useRiverReadings';
 import { emptyHistory, useDashboardHistory } from './hooks/useDashboardHistory';
 import { bucketsInWindow } from './lib/dashboard';
-import { formatDateTime } from './lib/hydrology';
+import { formatDateTime, formatMeters } from './lib/hydrology';
 import { monitoringConfig } from './config/monitoring';
 
 export default function App() {
@@ -26,50 +26,56 @@ export default function App() {
   const closeModal = useCallback(() => setIsModalOpen(false), []);
   return <div className="dashboard-shell min-h-screen flex flex-col text-slate-800 font-sans antialiased selection:bg-sky-200">
     <a href="#conteudo" className="skip-link">Ir para o conteúdo</a>
-    <Header isLoading={isLoading} onRefresh={refresh} onOpenSupabaseModal={() => setIsModalOpen(true)} connection={connection} />
-    <main id="conteudo" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10 pb-8 space-y-7">
-      <section className="dashboard-intro flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-        <div><p className="section-eyebrow"><MapPin size={14} /> Rio do Sul · Santa Catarina</p>
-          <h1 id="main-app-title" className="text-3xl sm:text-4xl font-extrabold tracking-tight text-sky-950 mt-3">Monitoramento dos rios</h1>
-          <p className="text-sm text-slate-600 mt-3 max-w-2xl leading-relaxed">Acompanhe os níveis medidos e a evolução dos rios da cidade.<br className="hidden sm:block" /> Informação clara para observar o que muda, a cada leitura.</p></div>
-        <a href="https://defesacivil.riodosul.sc.gov.br/" target="_blank" rel="noopener noreferrer" className="official-link"><Shield size={17} /> Avisos da Defesa Civil <ExternalLink size={13} /></a>
-      </section>
+    <div className="dashboard-top">
+      <img className="hero-city-photo" src="/images/rio-do-sul-noite.jpg" alt="Vista aérea noturna de Rio do Sul, com a igreja e as avenidas iluminadas" width="720" height="450" fetchPriority="high" />
+      <Header isLoading={isLoading} onRefresh={refresh} onOpenSupabaseModal={() => setIsModalOpen(true)} connection={connection} />
       <DashboardIndicators stations={stations} now={now} lastQuery={lastQuery} isLoading={isLoading} />
-      <div className="information-strip"><Info size={18} className="shrink-0 mt-0.5" /><p>Confira sempre a data da medição. Leituras antigas e falhas de consulta não confirmam a condição atual do rio. Este é um painel independente da <strong>Silveira Lab</strong>.</p></div>
-      <section id="estacoes" aria-labelledby="stations-title" className="space-y-4 scroll-mt-5">
-        <div className="flex flex-wrap justify-between items-end gap-3"><div><p className="section-eyebrow">Pontos de acompanhamento</p><h2 id="stations-title" className="section-title mt-1">Estações de monitoramento</h2></div><p className="text-xs text-slate-500">Medições da fonte · horários de São Paulo</p></div>
-        <div id="monitoring-stations-grid" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">{stations.map((station, index) => <StationCard key={station.station.id} data={station} now={now}
+    </div>
+    <main id="conteudo" className="dashboard-container dashboard-main">
+      <section id="estacoes" aria-labelledby="stations-title" className="stations-section">
+        <div className="section-heading"><Waves size={31} /><div><h2 id="stations-title" className="section-title">Estações de Monitoramento</h2><p>Níveis medidos dos rios de Rio do Sul, com tendência e variação registradas pela fonte.</p></div></div>
+        <div id="monitoring-stations-grid" className="stations-grid">{stations.map((station, index) => <StationCard key={station.station.id} data={station} now={now}
           history={histories[station.station.id] ?? emptyHistory} series={series[index]} />)}</div>
       </section>
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)] gap-5 items-start">
-        <section aria-labelledby="overview-title" className="dashboard-panel min-w-0">
-          <div className="flex flex-wrap gap-3 items-start justify-between"><div><p className="section-eyebrow"><Waves size={15} /> Evolução dos níveis</p><h2 id="overview-title" className="section-title mt-2">Panorama das últimas 24 horas</h2></div><span className="neutral-pill">Intervalo de 1 hora</span></div>
-          <p className="text-xs text-slate-500 mt-3 leading-relaxed">{formatDateTime(new Date(start).toISOString())} — {formatDateTime(new Date(now).toISOString())} · metros · São Paulo</p>
-          <ul aria-label="Legenda das estações e disponibilidade" className="chart-legend">{series.map(item => {
-            const history = histories[item.id];
-            const count = item.buckets.filter(bucket => bucket.reading).length;
-            return <li key={item.id}><span className="legend-line" style={{ borderColor: item.color, borderTopStyle: item.dash ? 'dashed' : 'solid' }} aria-hidden="true" /><div><span className="font-semibold text-slate-700">{item.name}</span><span className="block text-slate-500 mt-1">{!history || history.isLoading ? 'Consultando histórico…' : history.error ? 'Histórico indisponível' : count ? `${count} faixas com medição · ${item.buckets.length - count} sem medição` : 'Sem medições em 24 horas'}</span></div></li>;
-          })}</ul>
-          {visibleSeries.some(item => item.buckets.some(bucket => bucket.reading)) ? <RiverTimeline series={visibleSeries} start={start} end={now} />
-            : <p role="status" className="chart-message">{stations.some(item => !histories[item.station.id] || histories[item.station.id].isLoading) ? 'Consultando panorama…' : stations.some(item => histories[item.station.id]?.error) ? 'Panorama indisponível ou incompleto. Tente atualizar o painel.' : 'Sem medições nas últimas 24 horas.'}</p>}
-          <p className="text-xs text-slate-500 mt-3 leading-relaxed">Última medição válida por hora, no horário real. Lacunas interrompem as linhas. <span className="sm:hidden">Deslize o gráfico para ver todos os horários. </span>Consulte os valores no histórico de cada estação.</p>
-          <div className="mt-5 rounded-xl bg-sky-50 p-3 text-xs text-sky-900 leading-relaxed flex gap-2"><Info size={16} className="shrink-0 mt-0.5" /><p>Cada estação tem sua própria referência de nível. Comparar alturas absolutas <strong>não equivale a comparar riscos de enchente</strong>.</p></div>
+      <div className="dashboard-detail-grid">
+        <section aria-labelledby="overview-title" className="dashboard-panel panorama-panel">
+          <div className="panel-heading"><ChartNoAxesColumnIncreasing size={23} /><div><h2 id="overview-title" className="section-title">Panorama das últimas 24 horas</h2><p>Evolução do nível dos rios nas três estações · metros · 1 h</p></div></div>
+          <p className="period-caption">{formatDateTime(new Date(start).toISOString())} — {formatDateTime(new Date(now).toISOString())} · São Paulo</p>
+          <div className="panorama-body">
+            {visibleSeries.some(item => item.buckets.some(bucket => bucket.reading)) ? <RiverTimeline series={visibleSeries} start={start} end={now} />
+              : <p role="status" className="chart-message">{stations.some(item => !histories[item.station.id] || histories[item.station.id].isLoading) ? 'Consultando panorama…' : stations.some(item => histories[item.station.id]?.error) ? 'Panorama indisponível ou incompleto. Tente atualizar o painel.' : 'Sem medições nas últimas 24 horas.'}</p>}
+            <ul aria-label="Legenda das estações e disponibilidade" className="chart-legend">{series.map(item => {
+              const history = histories[item.id];
+              const count = item.buckets.filter(bucket => bucket.reading).length;
+              const last = [...item.buckets].reverse().find(bucket => bucket.reading)?.reading;
+              return <li key={item.id}><span className="legend-line" style={{ borderColor: item.color, borderTopStyle: item.dash ? 'dashed' : 'solid' }} aria-hidden="true" /><div><span className="legend-name" title={item.name}>{item.name.split(' – ')[0].replace(/^Ponte /, '')}</span>
+                <span className="legend-value">{history && !history.isLoading && !history.error && last ? formatMeters(last.levelMeters) : '—'}</span>
+                <span className="legend-status">{!history || history.isLoading ? 'Consultando histórico…' : history.error ? 'Histórico indisponível' : count ? `${count} faixas com medição · ${item.buckets.length - count} sem medição` : 'Sem medições em 24 horas'}</span></div></li>;
+            })}</ul>
+          </div>
+          <p className="panel-footnote">Horários reais; lacunas interrompem as linhas. Consulte os valores no histórico. Cada estação tem sua própria referência: comparar alturas <strong>não equivale a comparar riscos de enchente</strong>.</p>
         </section>
         <HydrologySummary stations={stations} histories={histories} series={series} now={now} />
+        <section id="entenda" aria-labelledby="guide-title" className="dashboard-panel guidance-panel">
+          <div className="panel-heading"><Info size={24} /><h2 id="guide-title" className="section-title">Entenda os níveis</h2></div>
+          <p className="guidance-intro">O nível indica a altura da água em relação à referência de cada estação. A situação exibida é a classificação registrada pela fonte; o painel não calcula novos alertas.</p>
+          <div className="guidance-list">
+            <article><TrendingUp /><div><h3>Acompanhe a evolução</h3><p>Observe a tendência e a variação. Diferenças entre extremos não garantem movimento contínuo nem previsão.</p></div></article>
+            <article><Bell /><div><h3>Fique atento aos horários</h3><p>A consulta indica a tentativa de obter dados; a medição indica quando o nível foi registrado. Após {monitoringConfig.staleAfterMinutes} minutos, a leitura é sinalizada como desatualizada.</p></div></article>
+            <article><Shield /><div><h3>Priorize os avisos oficiais</h3><p>Ferramenta independente da Silveira Lab. Siga as orientações da Defesa Civil pelos canais oficiais.</p></div></article>
+          </div>
+          <a className="guidance-link" href="https://defesacivil.riodosul.sc.gov.br/" target="_blank" rel="noopener noreferrer">Avisos da Defesa Civil <ExternalLink size={13} /></a>
+        </section>
       </div>
-      <section id="entenda" aria-labelledby="guide-title" className="dashboard-panel scroll-mt-5">
-        <p className="section-eyebrow"><BookOpen size={15} /> Informação para acompanhar melhor</p><h2 id="guide-title" className="section-title mt-2">Entenda os dados, acompanhe com cuidado.</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mt-6">
-          {[
-            { Icon: Waves, title: 'O que o nível representa?', text: 'É a altura da água em relação à referência da estação. Níveis de pontos diferentes não representam o mesmo risco.' },
-            { Icon: TrendingUp, title: 'Observe a evolução', text: 'Leituras sucessivas ajudam a reconhecer mudanças. A diferença entre extremos não garante uma tendência contínua nem prevê o que acontecerá.' },
-            { Icon: Clock3, title: 'Dois horários diferentes', text: 'A consulta indica quando o painel tentou obter os dados. A medição indica quando o nível foi registrado pela fonte.' },
-            { Icon: Shield, title: 'Priorize os avisos oficiais', text: 'Este painel independente não substitui os comunicados e as orientações da Defesa Civil. Consulte sempre a fonte oficial.' },
-          ].map(({ Icon, title, text }) => <article key={title}><Icon size={20} className="text-sky-700 mb-3" /><h3 className="font-bold text-sm">{title}</h3><p className="text-xs text-slate-600 leading-relaxed mt-2">{text}</p></article>)}
-        </div>
-        <div className="border-t border-slate-100 mt-6 pt-5"><h3 className="text-xs font-bold text-slate-700 mb-3">Legenda das situações registradas pela fonte</h3><div className="flex flex-wrap gap-3 text-xs font-semibold">
-          <span className="situation-key bg-emerald-50 text-emerald-800">Normal</span><span className="situation-key bg-amber-50 text-amber-800">Atenção</span><span className="situation-key bg-orange-50 text-orange-800">Alerta</span><span className="situation-key bg-rose-50 text-rose-800">Emergência</span>
-        </div><p className="text-xs text-slate-500 mt-3 leading-relaxed">O painel não calcula novos alertas nem limites de risco. A sinalização de leitura desatualizada ocorre após {monitoringConfig.staleAfterMinutes} minutos sem nova medição e é independente dessa classificação.</p></div>
+      <section aria-labelledby="classification-title" className="dashboard-panel classification-panel">
+        <div className="panel-heading"><Shield size={24} /><h2 id="classification-title" className="section-title">Classificação das situações registradas pela fonte</h2></div>
+        <div className="classification-grid">{[
+          { label: 'Normal', key: 'normal', Icon: CircleCheck, text: 'Classificação Normal no registro da fonte.' },
+          { label: 'Atenção', key: 'atencao', Icon: TriangleAlert, text: 'Classificação Atenção no registro da fonte.' },
+          { label: 'Alerta', key: 'alerta', Icon: Info, text: 'Classificação Alerta no registro da fonte.' },
+          { label: 'Emergência', key: 'emergencia', Icon: Siren, text: 'Classificação Emergência no registro da fonte.' },
+        ].map(({ label, key, Icon, text }) => <article key={key} className={`classification-item classification-${key}`}><Icon size={27} /><div><h3>{label}</h3><p>{text}</p></div></article>)}</div>
+        <p className="panel-footnote">Confira sempre a data da medição. Leituras antigas ou falhas de consulta não confirmam a condição atual do rio. A indicação de desatualização é independente da classificação de risco.</p>
       </section>
     </main>
     {isModalOpen && <SupabaseInfoModal isOpen onClose={closeModal} />}
