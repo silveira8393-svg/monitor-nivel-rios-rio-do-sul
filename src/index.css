@@ -5,6 +5,34 @@ body {
 }
 
 @layer components {
+  .dashboard-shell { background: linear-gradient(180deg, #edf6fc 0, #f4f8fc 550px, #f5f8fb 100%); color-scheme: light; }
+  .dashboard-header { @apply bg-white/95 border-b border-slate-200; }
+  .brand-mark { @apply rounded-xl bg-sky-800 text-white p-2.5 shadow-sm; }
+  .refresh-button { @apply inline-flex items-center gap-2 rounded-lg bg-sky-800 text-white text-xs font-semibold px-4 py-2.5 shadow-sm hover:bg-sky-900 disabled:opacity-50 disabled:cursor-wait; }
+  .official-link { @apply inline-flex items-center gap-2 text-sky-800 bg-white border border-sky-200 px-4 py-3 rounded-xl text-xs font-semibold self-start sm:self-auto shadow-sm hover:bg-sky-50; }
+  .metric-card { @apply bg-white border border-slate-200/80 rounded-2xl p-5 shadow-[0_3px_16px_-10px_rgba(15,60,90,0.15)]; }
+  .metric-label { @apply flex gap-2 items-center justify-between text-xs font-semibold text-slate-500; }
+  .metric-label svg { @apply text-sky-700 shrink-0; }
+  .metric-value { @apply text-3xl font-extrabold text-sky-950 tracking-tight mt-4 mb-2; }
+  .metric-note { @apply text-[11px] text-slate-500 leading-relaxed mt-1; }
+  .situation-normal { color: #047857; }
+  .situation-atencao { color: #92400e; }
+  .situation-alerta { color: #c2410c; }
+  .situation-emergencia { color: #be123c; }
+  .information-strip { @apply flex gap-3 rounded-xl border border-sky-200/80 bg-sky-50/70 px-4 py-3 text-xs text-sky-900 leading-relaxed; }
+  .section-eyebrow { @apply flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-700; }
+  .section-title { @apply text-lg sm:text-xl font-extrabold tracking-tight text-sky-950; }
+  .dashboard-panel { @apply rounded-2xl bg-white border border-slate-200/80 p-5 sm:p-6 shadow-[0_3px_16px_-10px_rgba(15,60,90,0.15)]; }
+  .station-card { @apply rounded-2xl bg-white border border-slate-200/80 shadow-[0_3px_16px_-10px_rgba(15,60,90,0.15)] overflow-hidden flex flex-col min-w-0; }
+  .chart-message { @apply flex items-center min-h-24 text-xs text-slate-500 leading-relaxed py-4; }
+  .neutral-pill { @apply rounded-lg px-2.5 py-1.5 bg-slate-50 border border-slate-200 text-[10px] text-slate-600 font-semibold; }
+  .chart-legend { @apply flex flex-wrap gap-x-5 gap-y-3 mt-5 mb-4 text-[10px]; }
+  .chart-legend li { @apply flex gap-2 items-start; }
+  .legend-line { @apply inline-block w-5 border-t-[3px] mt-1 shrink-0; }
+  .timeline-scroll { @apply overflow-x-auto rounded-lg; }
+  .timeline-svg { display: block; width: 100%; min-width: 640px; }
+  .situation-key { @apply rounded-lg px-4 py-2; }
+  .skip-link { @apply sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-white focus:p-3 focus:rounded-lg; }
   .history-button {
     @apply inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed;
   }

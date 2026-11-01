@@ -16,6 +16,7 @@ export function useRiverReadings() {
   const refresh = useCallback(async () => {
     request.current?.abort();
     const controller = new AbortController();
+    const attemptedAt = new Date();
     request.current = controller;
     setIsLoading(true);
     try {
@@ -26,12 +27,14 @@ export function useRiverReadings() {
         const latestReading = entry?.reading && readingIsNewer(item.latestReading, entry.reading) ? entry.reading : item.latestReading;
         return { ...item, latestReading, isLoading: false, error: entry?.error ?? null };
       }));
-      setLastQuery(new Date());
-      setNow(Date.now());
     } catch {
       if (!controller.signal.aborted) setStations(previous => previous.map(item => ({ ...item, isLoading: false, error: 'Erro de comunicação. Última leitura preservada.' })));
     } finally {
-      if (!controller.signal.aborted) setIsLoading(false);
+      if (!controller.signal.aborted) {
+        setLastQuery(attemptedAt);
+        setNow(Date.now());
+        setIsLoading(false);
+      }
     }
   }, []);
 
