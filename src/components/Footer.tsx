@@ -13,7 +13,7 @@ export const Footer: React.FC = () => {
               <span>Monitor de Nível dos Rios – Rio do Sul</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Painel projetado para acompanhamento contínuo dos níveis dos rios em Rio do Sul (SC), estruturado para sincronização periódica a cada 15 minutos com os dados oficiais da Defesa Civil.
+              Painel de acompanhamento dos níveis dos rios em Rio do Sul (SC), com medições armazenadas e histórico por estação. Confira a data de cada leitura para avaliar sua atualidade.
             </p>
           </div>
 
@@ -46,7 +46,7 @@ export const Footer: React.FC = () => {
                 </a>
               </li>
               <li className="text-slate-400 pt-1">
-                Frequência de leitura estimada: <strong>15 minutos</strong>
+                A frequência de novas medições depende da fonte de dados.
               </li>
             </ul>
           </div>
